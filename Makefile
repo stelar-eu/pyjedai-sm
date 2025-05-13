@@ -1,6 +1,6 @@
 
 DOCKER=docker
-IMGTAG=yourusername/yourimagereponame:yourversiontag
+IMGTAG=img.stelar.gr/stelar/pyjedai-em:latest
 IMGPATH=.
 DOCKERFILE=$(IMGPATH)/Dockerfile
 

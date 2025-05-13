@@ -2,13 +2,43 @@ import json
 import sys
 import traceback
 from utils.mclient import MinioClient
-
+from pyjedai_utils import *
+from blocking_based import get_BlockingBasedWorkflow
+import time 
+from pyjedai_utils import *
+from blocking_based import get_BlockingBasedWorkflow
+import os
+from pyjedai.schema.schema_model import Schema
+from pyjedai.datamodel import SchemaData
+from pyjedai.schema.matching import ValentineSchemaMatching, ValentineMethodBuilder
+from val_utils import *
+from time import perf_counter
 # Here you may define the imports your tool needs...
 # import pandas as pd
 # import numpy as np
 # ...
 
-def run(json):
+
+
+# def prep_df(input_file, separator, engine, minio):
+#     """
+#     Prepare DataFrame from input file.
+#     """
+#     if input_file.startswith('s3://'):
+#         bucket, key = input_file.replace('s3://', '').split('/', 1)
+#         client = Minio(minio['endpoint_url'], access_key=minio['id'], secret_key=minio['key'])
+#         df = pd.read_csv(client.get_object(bucket, key), sep=separator, na_filter=False)
+#     else:
+#         df = pd.read_csv(input_file, sep=separator, na_filter=False)
+#     return df
+
+            
+        
+    
+    
+    
+
+def run(json_input):
 
     """
         This is the core method that initiates tool .py files execution. 
@@ -41,16 +71,85 @@ def run(json):
 
         """
         ################################## MINIO INIT #################################
-        minio_id = json['minio']['id']
-        minio_key = json['minio']['key']
-        minio_skey = json['minio']['skey']
-        minio_endpoint = json['minio']['endpoint_url']
+        minio_id = json_input['minio']['id']
+        minio_key = json_input['minio']['key']
+        minio_skey = json_input['minio']['skey']
+        minio_endpoint = json_input['minio']['endpoint_url']
+
+        if 'https://' in minio_endpoint:
+            minio_endpoint = minio_endpoint.replace('https://', '')
         
-        mc = MinioClient(minio_id, minio_key, minio_skey, minio_endpoint)
+        mc = MinioClient(access_key=minio_id, secret_key= minio_key, session_token=minio_skey, endpoint=minio_endpoint)
 
         # It is strongly suggested to use the get_object and put_object methods of the MinioClient
         # as they handle input paths provided by STELAR API appropriately. (S3 like paths)
         ###############################################################################
+
+
+
+        if not os.path.exists(".local"):
+            os.mkdir(".local")
+            
+            
+        """ 
+        JSON ARCHITECTURE
+        
+        
+        {
+            "input": {
+                "dataset_1" : {
+                    "csv_path" : ,
+                    "separator" : ,
+                    "id_column_name" : ,
+
+                    (optional)
+                    "name" : ,
+                    "attributes" : 
+                    
+                },
+                (optional)
+                "dataset_2" : {
+                    "csv_path" : ,
+                    "separator" : ,
+                    "id_column_name" : ,
+                    
+                    (optional)
+                    "name" : ,
+                    "attributes" : 
+                }
+                (optional)
+                "ground_truth" : {
+                    "csv_path" : ,
+                    "separator" : ,
+                }                
+                
+            },
+            "parameters": {
+                "workflow": "BlockingBasedWorkflow" / "EmbeddingsNNWorkflow",
+                "block_building" : {
+                    "method": "StandardBlocking", 
+                    "params" : {},
+                    "attributes_1": ,
+                    attributes_2"
+                }
+                "block_filtering" : []
+                "comparison_cleaning": {}
+                "entity_matching": {}
+                "clustering": {}
+                                    
+                    
+                
+                
+            }
+            
+            
+            
+        }
+        
+        
+        
+        
+        """
 
 
         """
@@ -95,20 +194,185 @@ def run(json):
             x = json['parameters']['x']
             y = json['parameters']['y']
         """        
-        x = json['parameters']['x'] 
-        y = json['parameters']['y']
+        metrics_dict = {}
+        
+        input = json_input['input'] if 'input' in json_input else json_input['inputs']
+        params = json_input['parameters']
+        
+        for key in ['dataset_1', 'dataset_2', "ground_truth"]:
+            if key not in input and key in params:
+                del params[key]
+                
+        
+       
+        
+        if params["workflow"] != "ValentineWorkflow":  
+            data : Schema = load_input(mc = mc, input=input, parameters=params)
+            if params["workflow"] == "BlockingBasedWorkflow":
+                workflow = get_BlockingBasedWorkflow(data, params)
+            elif params["workflow"] == "EmbeddingsNNWorkflow": 
+                params = load_embeddings(mc, input, params) 
+                workflow = get_EmbeddingsNNWorkFlow(data,params)
+            elif params["workflow"] == "JoinWorkflow": 
+                workflow = get_JoinWorkflow(data, params)    
+            
+
+            workflow.run(data, verbose=True, workflow_step_tqdm_disable=False)
+            execution_time = workflow.workflow_exec_time
 
 
-        """
+            # Handle Output
+            pairs_df = workflow.export_pairs()
+            metrics_df = workflow.to_df()
+            number_of_pairs = pairs_df.shape[0] if not pairs_df.empty else 0
+            
+            
+            if not pairs_df.empty: 
+                merged1 = pd.merge(data.dataset_1,
+                    pairs_df, left_on='id',
+                    right_on='id1', how='left')
+                d2 = data.dataset_2
+                id2 = 'id' 
+                # Step 2: Merge the result with df2 on mapping_df.id2 == df2.entity
+                final_df = pd.merge(merged1, d2, left_on='id2', right_on=id2, how='left', suffixes=('_d1', '_d2'))
+                # Optional: Drop unnecessary columns
+                pairs_df = final_df.drop(columns=['id1', 'id2', 'id_d1', 'id_d2', 'data_d1', 'data_d2'])
+                pairs_df.dropna(inplace=True)
+            
 
-            Here you may implement the execution logic of your tool. At this point you have available:
+            print(f"""
+                \nPrinting Final Pairs : {workflow.final_pairs}
+                \nPrinting Final Pairs: \n{pairs_df}
+                """)
+        
+            
+            if data.ground_truth is not None:
+                metrics_dict['F1 %'], metrics_dict['Precision %'], metrics_dict['Recall %'] = workflow.get_final_scores()
+        else:
+            data : SchemaData = VAL_load_input(mc=mc,input=input, parameters=params)
+            vmb = ValentineMethodBuilder
+            methods_dict = {
+                "Coma": vmb.coma_matcher,
+                "Cupid": vmb.cupid_matcher,
+                "DistributionBased": vmb.distribution_based_matcher,
+                "JaccardDistanceMatcher": vmb.jaccard_distance_matcher,
+                "SimilarityFlooding": vmb.similarity_flooding_mathcer
+            }
+            
+            if "matching" in params:
+                if "method" in params['matching']:
+                    method = methods_dict[params['matching']['method']]
+                    parameters = params['matching']['params']
+                    sig = inspect.signature(method)
+                    method_parameters = []    
+                    #    Get the parameters
+                    sig_dict = sig.parameters
+                    for key in sig_dict:
+                        method_parameters.append(key)
+                    
+                    
+                    lista = list(parameters.keys())
+                    for key in lista:
+                        if key not in method_parameters:
+                            del parameters[key]                        
+                    
+                    basematcher = method(**parameters)
+    
+                else: 
+                    raise Exception("\"matching\": { \"method\" }was not provided")
+            else: 
+                raise Exception(f"\"matching\" was not provided")
 
-                - Tool specific parameters from json['parameters']
-                - A client for MinIO acccess named 'mc' with method putObject(...) and getObject(...)
-        """
 
-        ##### Tool Logic #####
-        z=x+y
+            print(f"""
+----- Starting {params['matching']['method']} ---- 
+With parameters {json.dumps(params['matching']['params'], indent=4)} 
+""")
+            start_time = perf_counter()
+            vsm = ValentineSchemaMatching(basematcher)
+            top_columns = vsm.process(data)
+            end_time = perf_counter()
+            execution_time = end_time - start_time
+            matches = vsm.matches
+            
+            
+            pairs_list = []
+            
+            for pair in matches:
+                pairs_list.append((pair[0][1], pair[1][1]))
+
+            
+            number_of_pairs = len(matches)
+            
+            metrics_dict
+            if data.ground_truth: 
+                metrics_dict = vsm.matches.get_metrics(data.ground_truth)
+                        
+            # Handle Output
+            pairs_df = pd.DataFrame(pairs_list)
+            metrics_df = pd.DataFrame([metrics_dict])
+            number_of_pairs = pairs_df.shape[0] if not pairs_df.empty else 0
+            
+
+            print(f"""
+                \nPrinting Final Pairs : {pairs_df}
+                \nPrinting metrics Df : {metrics_df} 
+                """)        
+             
+        
+        metrics_dict['total_execution_time'] =  execution_time 
+        metrics_dict['total_pairs'] =  number_of_pairs 
+
+        
+        
+        print(f"""
+            \nPrinting Final Metrics : {json.dumps(metrics_dict, indent=4)}
+        
+        """)
+        
+        outputs_dict = {}
+        if 'output' in json_input: 
+            outputs = json_input['output']
+            for key in outputs:
+                output_path : str = None
+                if key == 'metrics':
+                    output_path = f'.local/output/{key}.csv'
+                    metrics_df.to_csv(output_path, index=False)
+                if key == 'pairs':
+                    output_path = f'.local/output/pairs.csv'
+                    pairs_df.to_csv(output_path, index=False)
+                if key == 'entities':
+                    if pairs_df.empty: 
+                        continue
+                    output_path = f'.local/output/entities.csv'
+                    # Step 1: Merge df1 with the mapping on df1.entity == mapping_df.id1
+                    merged1 = pd.merge(data.dataset_1,
+                            pairs_df, left_on=data.id_column_name_1,
+                            right_on='id1', how='left')
+                    d2 = data.dataset_1 if data.is_dirty_er else data.dataset_2
+                    id2 = data.id_column_name_1 if data.is_dirty_er else data.id_column_name_2
+                    # Step 2: Merge the result with df2 on mapping_df.id2 == df2.entity
+                    final_df = pd.merge(merged1, d2, left_on='id2', right_on=id2, how='left', suffixes=('_d1', '_d2'))
+                    # Optional: Drop unnecessary columns
+                    final_df = final_df.drop(columns=['id1', 'id2'])
+                    final_df.to_csv(output_path, index=False)
+
+                if output_path:
+                    mc.put_object(file_path=output_path, s3_path=outputs[key])
+                    outputs_dict[key] = outputs[key]         
+        
+
+        json_output = {
+                'message': 'Tool Executed Succesfully',
+                'metrics': metrics_dict,
+                'status': "success",
+        }
+
+        json_output['output'] = outputs_dict
+        
+        
+        
+
 
         """
             This json should contain any output of your tool that you consider valuable. Metrics field affects
@@ -132,16 +396,8 @@ def run(json):
             }
 
         """
-        json= {
-                'message': 'Tool Executed Succesfully',
-                'outputs': {}, 
-                'metrics': { 
-                    'z': z, 
-                }, 
-                'status': "success",
-              }
 
-        return json
+        return json_output
     except Exception as e:
         print(traceback.format_exc())
         return {

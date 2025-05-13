@@ -1,0 +1,50 @@
+
+{
+    
+    "minio": {
+        "id" : "1",
+        "key" : "2",
+        "skey": "3",
+        "endpoint_url": "https://minio.stelar.gr"
+    },
+    "inputs": {
+        "dataset_1" : [
+            "s3://klms-bucket/assays_both_50_1_ac1_ev/assays_both_50_1_ac1_ev_source.csv"	
+        ],
+        "dataset_2" : [
+            "s3://klms-bucket/assays_both_50_1_ac1_ev/assays_both_50_1_ac1_ev_target.csv"	
+        ],
+        "ground_truth" : [
+            "s3://klms-bucket/assays_both_50_1_ac1_ev/assays_both_50_1_ac1_ev_mapping.json"	
+        ]
+    },
+    "matching_type":"composite",
+    "parameters" : {
+        "dataset_1" : {
+            "separator" : ",",
+            "dataset_name" : "source"                    
+        },
+        "dataset_2" : {
+            "separator" : ",", 
+            "dataset_name" : "target"
+        },
+        "matching_type": "composite",
+        "ground_truth" : {
+            "is_json" : true
+        },                
+        "workflow": "ValentineWorkflow",
+        "matching" : { 
+            "method" : "Coma",
+            "params" : {
+                "max_n" : 10,
+                "random_parameter" : 15
+            }
+        }
+    },       
+    "outputs": {
+        "metrics" : "s3://klms-bucket/pyjedai-output/metrics.csv",
+        "pairs" : "s3://klms-bucket/pyjedai-output/pairs.csv",
+        "entities" : "s3://klms-bucket/pyjedai-output/entities_df.csv"
+    }
+}
+
