@@ -22,7 +22,7 @@ The following README will guide you through the whole process of Entity Matching
     <td><code>dataset_2</code></td>
     <td><code>.csv</code> format</td>
     <td><code>list</code></td>
-    <td></td>
+    <td>&#10004;</td>
   </tr>
   <tr>
     <td><code>ground_truth</code></td>
@@ -58,7 +58,6 @@ The following README will guide you through the whole process of Entity Matching
         	]
 }
 ```
->  &#x1F4A1; **Tip:** If `dataset_2` is provided, matches will only be of type (e_1, e_2), where e_1 is an entity in `dataset_1` and e_2 is an entity in `dataset_2`.
 
 >  &#x1F4A1; **Tip:** If `ground_truth` is provided, metrics will be returned
 ## Parameters
@@ -183,10 +182,16 @@ Attributes of key: `ground_truth`
   </tr>
   <tr>
 	  <td><code>separator</code></td>
-	  <td>Character separating values in csv</td>
+	  <td>Character separating values in csv<br>Must provide if <code>.csv</code></td>
 	  <td><code>char</code></td>
-	  <td>&#10004;</td> 
+	  <td></td> 
   </tr>
+  <tr>
+	  <td><code>is_json</code></td>
+	  <td>If ground_truth is <code>.json</code></td>
+	  <td><code>bool</code></td>
+	  <td></td> 
+</tr>
 </table>
 
 > Input Examples
