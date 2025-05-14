@@ -100,45 +100,52 @@ Concering input, additional info must be provided.
   	  <td><code>workflow</code></td>
 	  <td>Select your preferred workflow:  
   		<code>BlockingBasedWorkflow</code>,  
-  		<code>EmbeddingsNNWorkflow</code>, or  
-  		<code>JoinWorkflow</code>  
+  		<code>EmbeddingsNNWorkflow</code>,  
+  		<code>JoinWorkflow</code>, or
+      <code>ValentineWorkflow</code>
 	  <td><code>string</code></td>
 	  <td>&#10004;</td> 
   </tr>
   <tr>
   	  <td><code>block_building</code></td>
 	  <td>Block building method and parameters used only for <code>BlockingBasedWorkflow</code>, <code>EmbeddingsNNWorkflow</code> 
-	  <td><a href="https://github.com/Teris45/pyjedai2klms/blob/main/docs/block_building.md">block_building_object</a></td>
+	  <td><a href="https://github.com/stelar-eu/pyjedai-sm/blob/main/docs/block_building.md">block_building_object</a></td>
 	  <td>&#10004;</td> 
   </tr>
   <tr>
   	  <td><code>block_cleaning</code></td>
 	  <td>Block cleaning method and parameters used only for <code>BlockingBasedWorkflow</code> <br>More than one <code>block_cleaning</code> methods can be used 
-	  <td><a href="https://github.com/Teris45/pyjedai2klms/blob/main/docs/block_cleaning.md">block_cleaning_object</a> or <code>list</code> of <a href="https://github.com/Teris45/pyjedai2klms/blob/main/docs/block_cleaning.md">block_cleaning_object</a></td>
+	  <td><a href="https://github.com/stelar-eu/pyjedai-sm/blob/main/docs/block_cleaning.md">block_cleaning_object</a> or <code>list</code> of <a href="https://github.com/stelar-eu/pyjedai-sm/blob/main/docs/block_cleaning.md">block_cleaning_object</a></td>
 	  <td></td> 
   </tr>
   <tr>
     <td><code>comparison_cleaning</code></td>
 	  <td>Comparison cleaning method and parameters used only for <code>BlockingBasedWorkflow</code> </td> 
-	  <td><a href="https://github.com/Teris45/pyjedai2klms/blob/main/docs/comparison_cleaning.md">comparison-cleaning-object</a></td>
+	  <td><a href="https://github.com/stelar-eu/pyjedai-sm/blob/main/docs/comparison_cleaning.md">comparison-cleaning-object</a></td>
 	  <td></td> 
   </tr>
   <tr>
     <td><code>entity_matching</code></td>
 	  <td>Entity Matching method and parameters used only for <code>BlockingBasedWorkflow</code> </td> 
-	  <td><a href="https://github.com/Teris45/pyjedai2klms/blob/main/docs/entity_matching.md">entity-matching-object</a></td>
+	  <td><a href="https://github.com/stelar-eu/pyjedai-sm/blob/main/docs/entity_matching.md">entity-matching-object</a></td>
 	  <td>&#10004;</td> 
   </tr>
   <tr>
     <td><code>clustering</code></td>
 	  <td>Clustering method and parameters used only for <code>BlockingBasedWorkflow</code>, <code>EmbeddingsNNWorkflow</code> or <code>JoinWorkflow</code> </td> 
-	  <td><a href="https://github.com/Teris45/pyjedai2klms/blob/main/docs/clustering.md">clustering-object</a></td>
+	  <td><a href="https://github.com/stelar-eu/pyjedai-sm/blob/main/docs/clustering.md">clustering-object</a></td>
 	  <td></td> 
   </tr>
   <tr>
     <td><code>join</code></td>
 	  <td>Join method and parameters used only for <code>JoinWorkflow</code> </td> 
-	  <td><a href="https://github.com/Teris45/pyjedai2klms/blob/main/docs/join.md">join-object</a></td>
+	  <td><a href="https://github.com/stelar-eu/pyjedai-sm/blob/main/docs/join.md">join-object</a></td>
+	  <td>&#10004;</td> 
+  </tr>
+  <tr>
+    <td><code>valentine_matching</code></td>
+    <td>Valentine matching method used only for <code>ValentineWorkflow</code></td>
+    <td><a href="https://github.com/stelar-eu/pyjedai-sm/blob/main/docs/valentine.md">valentine-object</a></td>
 	  <td>&#10004;</td> 
   </tr>
 		
@@ -235,7 +242,8 @@ Attributes of key: `ground_truth`
             "params" : {
                 "similarity_threshold" : 0.1
             }
-        }
+        },
+        "matching_type": "content"
 }
 
 ```
@@ -254,7 +262,8 @@ Attributes of key: `ground_truth`
             "params" : {
                 "similarity_threshold": 0.4
             }
-        }
+        },
+        "matching_type": "content"
      ....     
     }    
 ```   
@@ -275,7 +284,23 @@ Attributes of key: `ground_truth`
             "params" : {
                 "similarity_threshold": 0.4
             }
-        }
+        },
+        "matching_type": "content"
+     ....     
+    }    
+```   
+```
+"parameters" : {           
+        "workflow": "ValentineWorkflow",
+        "valentine_matching": 
+        {
+            "method" : "Coma",
+            "params" : {
+                "max_n" : 10,
+                "use_instances": False,
+            }
+        },
+        "matching_type": "content"
      ....     
     }    
 ```   
@@ -299,14 +324,8 @@ Attributes of key: `ground_truth`
   </tr>
   <tr>
     <td><code>pairs</code></td>
-    <td>Creates a file with the ids of pairs<br><code>.csv</code> format</td>
+    <td>Creates a file with the attribute pairs<br><code>.csv</code> format</td>
     <td><code>path</code></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td><code>entities</code></td>
-    <td>Creates a file with all the matched entities<code>.csv</code> format</td>
-    <td><code>list</code></td>
     <td></td>
   </tr>
 </table>
@@ -316,7 +335,6 @@ Attributes of key: `ground_truth`
   "outputs": {
         "metrics" : "s3://klms-bucket/pyjedai-output/metrics.csv",
         "pairs" : "s3://klms-bucket/pyjedai-output/pairs.csv",
-        "entities" : "s3://klms-bucket/pyjedai-output/entities_df.csv"
   }
 }
 

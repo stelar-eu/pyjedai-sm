@@ -2,9 +2,9 @@
 {
     
     "minio": {
-        "id" : "1",
-        "key" : "2",
-        "skey": "3",
+        "id" : "",
+        "key" : "",
+        "skey": "",
         "endpoint_url": "https://minio.stelar.gr"
     },
     "inputs": {
@@ -33,7 +33,7 @@
             "is_json" : true
         },                
         "workflow": "ValentineWorkflow",
-        "matching" : { 
+        "valentine_matching" : { 
             "method" : "Coma",
             "params" : {
                 "max_n" : 10,
@@ -43,8 +43,7 @@
     },       
     "outputs": {
         "metrics" : "s3://klms-bucket/pyjedai-output/metrics.csv",
-        "pairs" : "s3://klms-bucket/pyjedai-output/pairs.csv",
-        "entities" : "s3://klms-bucket/pyjedai-output/entities_df.csv"
+        "pairs" : "s3://klms-bucket/pyjedai-output/pairs.csv"
     }
 }
 

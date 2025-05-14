@@ -259,10 +259,10 @@ def run(json_input):
                 "SimilarityFlooding": vmb.similarity_flooding_mathcer
             }
             
-            if "matching" in params:
-                if "method" in params['matching']:
-                    method = methods_dict[params['matching']['method']]
-                    parameters = params['matching']['params']
+            if "valentine_matching" in params:
+                if "method" in params['valentine_matching']:
+                    method = methods_dict[params['valentine_matching']['method']]
+                    parameters = params['valentine_matching']['params']
                     sig = inspect.signature(method)
                     method_parameters = []    
                     #    Get the parameters
@@ -279,14 +279,14 @@ def run(json_input):
                     basematcher = method(**parameters)
     
                 else: 
-                    raise Exception("\"matching\": { \"method\" }was not provided")
+                    raise Exception("\"valentine_matching\": { \"method\" }was not provided")
             else: 
-                raise Exception(f"\"matching\" was not provided")
+                raise Exception(f"\"valentine_matching\" was not provided")
 
 
             print(f"""
------ Starting {params['matching']['method']} ---- 
-With parameters {json.dumps(params['matching']['params'], indent=4)} 
+----- Starting {params['valentine_matching']['method']} ---- 
+With parameters {json.dumps(params['valentine_matching']['params'], indent=4)} 
 """)
             start_time = perf_counter()
             vsm = ValentineSchemaMatching(basematcher)
@@ -331,8 +331,13 @@ With parameters {json.dumps(params['matching']['params'], indent=4)}
         """)
         
         outputs_dict = {}
-        if 'output' in json_input: 
-            outputs = json_input['output']
+        if 'output' or 'outputs' in json_input: 
+            outputs = json_input['output'] if 'output' in json_input else json_input['outputs']
+            
+            if not os.path.exists(".local/output"):
+                os.mkdir(".local/output")
+            
+
             for key in outputs:
                 output_path : str = None
                 if key == 'metrics':
@@ -341,21 +346,6 @@ With parameters {json.dumps(params['matching']['params'], indent=4)}
                 if key == 'pairs':
                     output_path = f'.local/output/pairs.csv'
                     pairs_df.to_csv(output_path, index=False)
-                if key == 'entities':
-                    if pairs_df.empty: 
-                        continue
-                    output_path = f'.local/output/entities.csv'
-                    # Step 1: Merge df1 with the mapping on df1.entity == mapping_df.id1
-                    merged1 = pd.merge(data.dataset_1,
-                            pairs_df, left_on=data.id_column_name_1,
-                            right_on='id1', how='left')
-                    d2 = data.dataset_1 if data.is_dirty_er else data.dataset_2
-                    id2 = data.id_column_name_1 if data.is_dirty_er else data.id_column_name_2
-                    # Step 2: Merge the result with df2 on mapping_df.id2 == df2.entity
-                    final_df = pd.merge(merged1, d2, left_on='id2', right_on=id2, how='left', suffixes=('_d1', '_d2'))
-                    # Optional: Drop unnecessary columns
-                    final_df = final_df.drop(columns=['id1', 'id2'])
-                    final_df.to_csv(output_path, index=False)
 
                 if output_path:
                     mc.put_object(file_path=output_path, s3_path=outputs[key])
