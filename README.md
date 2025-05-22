@@ -330,6 +330,9 @@ Attributes of key: `ground_truth`
   </tr>
 </table>
 
+>  &#x1F4A1; **Tip:** Find json examples <a href="https://github.com/stelar-eu/pyjedai-sm/blob/main/docs/json_examples">here</a>.
+
+
 ```
 {
   "outputs": {

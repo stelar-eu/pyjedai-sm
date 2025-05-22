@@ -18,7 +18,6 @@
             "s3://klms-bucket/assays_both_50_1_ac1_ev/assays_both_50_1_ac1_ev_mapping.json"	
         ]
     },
-    "matching_type":"composite",
     "parameters" : {
         "dataset_1" : {
             "separator" : ",",
