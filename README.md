@@ -2,6 +2,10 @@
 
 The following README will guide you through the whole process of Schema Matching using pyJedAI.
 
+Regarding the extensive experimental analysis that compares Schema Matching with Schema Clustering, the code can be find out <a href="https://github.com/Teris45/valentine-experiments">here</a>.
+
+The detailed experimental results are available <a href="https://github.com/stelar-eu/pyjedai-sm/tree/main/evaluation/clustering-vs-matching">here</a>.
+
 >  &#x1F4A1; **Tip:** Find json examples <a href="https://github.com/stelar-eu/pyjedai-sm/blob/main/docs/json_examples">here</a>.
 
 >  &#x1F4A1; **Tip:** If you want to learn more about pyJedAI read the docs <a href="https://pyjedai.readthedocs.io/en/latest/intro.html">here</a>.
